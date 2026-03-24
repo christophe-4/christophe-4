@@ -18,6 +18,8 @@ def compute_avg_daily_demand(
     demand: pd.DataFrame, window_days: int = 28, end_date: date | None = None
 ) -> pd.DataFrame:
     'For each sku, compute rolling average demand/day.'
+    if window_days <= 0:
+        raise ValueError("window_days must be > 0")
     if demand.empty:
         return pd.DataFrame(columns=["date", "sku", "avg_daily_demand"])
 
@@ -28,8 +30,9 @@ def compute_avg_daily_demand(
 
     per_sku: list[pd.DataFrame] = []
     for sku, g in df.groupby("sku", sort=False):
+        history_start = g["date"].min() - pd.Timedelta(days=window_days - 1)
         sku_end = max(g["date"].max(), global_end)
-        full_range = pd.date_range(start=g["date"].min(), end=sku_end, freq="D")
+        full_range = pd.date_range(start=history_start, end=sku_end, freq="D")
         series = (
             g[["date", "demand_qty"]]
             .set_index("date")
@@ -39,6 +42,7 @@ def compute_avg_daily_demand(
         series["avg_daily_demand"] = series["demand_qty"].rolling(window_days, min_periods=1).mean()
         series = series.reset_index()
         series["date"] = series["date"].dt.date
+        series = series[series["date"] >= g["date"].min().date()]
         series["sku"] = sku
         per_sku.append(series[["date", "sku", "avg_daily_demand"]])
 
@@ -72,8 +76,12 @@ def compute_coverage_days(stock: pd.DataFrame, avg_demand: pd.DataFrame, asof: d
 
 def compute_dormant_stock(sales: pd.DataFrame, stock: pd.DataFrame, lookback_days: int = 60) -> pd.DataFrame:
     'Dormant = stock > 0 and no sales in lookback window.'
-    asof = pd.to_datetime(stock["snapshot_date"]).dt.date.max()
-    start = asof - timedelta(days=lookback_days)
+    if lookback_days <= 0:
+        raise ValueError("lookback_days must be > 0")
+    st = stock.copy()
+    st["snapshot_date"] = pd.to_datetime(st["snapshot_date"]).dt.date
+    asof = st["snapshot_date"].max()
+    start = asof - timedelta(days=lookback_days - 1)
 
     s = sales.copy()
     s["date"] = pd.to_datetime(s["date"]).dt.date
@@ -83,8 +91,8 @@ def compute_dormant_stock(sales: pd.DataFrame, stock: pd.DataFrame, lookback_day
         .agg(sales_lookback_qty=("qty", "sum"))
     )
 
-    st = stock[stock["snapshot_date"] == asof].copy()
-    out = st.merge(recent, how="left", on="sku")
+    st_asof = st[st["snapshot_date"] == asof].copy()
+    out = st_asof.merge(recent, how="left", on="sku")
     out["sales_lookback_qty"] = out["sales_lookback_qty"].fillna(0.0)
     out = out[(out["on_hand_qty"] > 0) & (out["sales_lookback_qty"] == 0)]
     return out[["snapshot_date", "sku", "on_hand_qty", "sales_lookback_qty"]].sort_values("on_hand_qty", ascending=False)
@@ -94,8 +102,9 @@ def compute_abc(sales: pd.DataFrame, catalog: pd.DataFrame) -> pd.DataFrame:
     'ABC basé sur la valeur de consommation (qty * unit_cost) sur toute la période.'
     s = sales.copy().groupby("sku", as_index=False).agg(total_qty=("qty", "sum"))
     c = catalog.copy()
-    if "unit_cost" not in c.columns:
-        c["unit_cost"] = np.nan
+    for col in ["unit_cost", "category", "supplier", "description"]:
+        if col not in c.columns:
+            c[col] = np.nan
 
     df = s.merge(c[["sku", "unit_cost", "category", "supplier", "description"]], how="left", on="sku")
     df["unit_cost"] = pd.to_numeric(df["unit_cost"], errors="coerce")

@@ -61,7 +61,9 @@ def generate_demo(out_dir: str | pathlib.Path, n_skus: int = 200, days: int = 12
         dormant_sku = skus[4]
         sales2 = sales.copy()
         sales2["date_dt"] = pd.to_datetime(sales2["date"]).dt.date
-        sales2 = sales2[~((sales2["sku"] == dormant_sku) & (sales2["date_dt"] >= end - timedelta(days=60)))]
+        sales2 = sales2[
+            ~((sales2["sku"] == dormant_sku) & (sales2["date_dt"] >= end - timedelta(days=59)))
+        ]
         sales2.drop(columns=["date_dt"]).to_csv(out_dir / "sales.csv", index=False)
 
     stock.to_csv(out_dir / "stock.csv", index=False)

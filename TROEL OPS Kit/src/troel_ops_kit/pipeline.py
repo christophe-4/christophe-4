@@ -79,6 +79,10 @@ def run(
     issues_df = issues_to_frame(issues)
     issues_df.to_csv(out / "issues.csv", index=False)
     logger.info("event=validate issues=%s", len(issues_df))
+    error_count = int((issues_df["level"] == "error").sum()) if not issues_df.empty else 0
+    if error_count:
+        logger.error("event=validation_failed errors=%s issues_path=%s", error_count, out / "issues.csv")
+        raise ValueError(f"Validation failed with {error_count} error(s). See {out / 'issues.csv'}")
 
     demand = compute_daily_demand(sales)
     asof = pd.to_datetime(stock["snapshot_date"]).dt.date.max()

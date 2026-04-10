@@ -5,11 +5,6 @@
 
 Pragmatic Supply Chain toolkit for **ingest -> validate -> KPI -> alerts -> report** using only synthetic demo data.
 
-## Recruiter Quick Read
-- Read in 2 minutes: [docs/RECRUITER.md](docs/RECRUITER.md)
-- Architecture overview: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- Synthetic business case: [docs/CASE_STUDY.md](docs/CASE_STUDY.md)
-
 ## Why this project exists
 `TROEL OPS Kit` is a portfolio-grade CLI that demonstrates how to operationalize supply/stock analytics without over-engineering.
 
@@ -21,19 +16,89 @@ Pragmatic Supply Chain toolkit for **ingest -> validate -> KPI -> alerts -> repo
 This project lives in the `TROEL OPS Kit/` folder of the portfolio repository.
 The GitHub Actions workflow that validates it is defined at the repository root.
 
-## Quick demo (5 min)
+## Business utility (what this application is for)
+`TROEL OPS Kit` helps operations teams turn raw ERP exports into daily action lists:
+- Detect stockout risks before they happen
+- Detect dormant inventory that ties up cash
+- Prioritize SKUs by value impact (ABC)
+- Keep data quality visible and auditable
+
+In practice, the tool replaces manual spreadsheet checks with a reproducible CLI pipeline.
+
+## What it calculates
+From `sales + stock + catalog`, the pipeline computes:
+- **Coverage days**: `on_hand_qty / avg_daily_demand` (risk of stockout)
+- **Dormant stock**: `stock > 0` and `0 sales` over a lookback window (default 60 days)
+- **ABC class**: consumption value ranking (`total_qty * unit_cost`) with cumulative buckets:
+  - `A` up to 80%
+  - `B` from 80% to 95%
+  - `C` above 95%
+
+It also computes validation issues and alert rules:
+- `LOW_COVERAGE`
+- `DEAD_SKU`
+- `DATA_QUALITY`
+
+## Exact commands (copy/paste)
+Run from project folder:
 
 ```bash
-python -m venv .venv
+cd "/home/christophetroel/Documents/Les projets/christophe-4/TROEL OPS Kit"
+```
+
+Create environment and install:
+
+```bash
+python3 -m venv .venv
 # Linux/macOS
 source .venv/bin/activate
 # Windows PowerShell
 # .venv\Scripts\Activate.ps1
 
 pip install -e ".[dev]"
+```
 
+Check CLI:
+
+```bash
+troel-ops --help
+```
+
+Generate synthetic demo data and run the full pipeline:
+
+```bash
 troel-ops demo generate --out ./data/demo
-troel-ops run --sales ./data/demo/sales.csv --stock ./data/demo/stock.csv --catalog ./data/demo/catalog.csv --out ./out
+troel-ops run \
+  --sales ./data/demo/sales.csv \
+  --stock ./data/demo/stock.csv \
+  --catalog ./data/demo/catalog.csv \
+  --out ./out
+```
+
+Run with your own CSV files (`data/Mes fichiers`):
+
+```bash
+troel-ops run \
+  --sales "./data/Mes fichiers/sales.csv" \
+  --stock "./data/Mes fichiers/stock.csv" \
+  --catalog "./data/Mes fichiers/catalog.csv" \
+  --out ./out
+```
+
+Minimum required columns:
+- `sales.csv`: `date`, `sku`, `qty`
+- `stock.csv`: `snapshot_date`, `sku`, `on_hand_qty`
+- `catalog.csv`: `sku`
+
+Run with custom column mapping:
+
+```bash
+troel-ops run \
+  --sales "./data/Mes fichiers/sales.csv" \
+  --stock "./data/Mes fichiers/stock.csv" \
+  --catalog "./data/Mes fichiers/catalog.csv" \
+  --mapping ./mapping.example.json \
+  --out ./out
 ```
 
 ## Expected outputs

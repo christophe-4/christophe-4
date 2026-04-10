@@ -25,3 +25,6 @@ out/
 .vscode/
 .idea/
 AGENTS.md
+.codex
+.codex/
+docs/MODE_EMPLOI.md

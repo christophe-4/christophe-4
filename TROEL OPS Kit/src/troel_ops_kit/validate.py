@@ -63,7 +63,16 @@ def validate_catalog(df: pd.DataFrame) -> list[ValidationIssue]:
         idx = df[df["sku"].isna()].index.tolist()[:25]
         for i in idx:
             issues.append(ValidationIssue("error", "catalog", int(i), "sku", "sku is missing"))
-    issues += _validate_rows(df.fillna(value={"sku": ""}), CatalogRow, "catalog")
+
+    # Pandas represents empty cells as NaN; normalize optional fields to None so
+    # Pydantic accepts them when catalog columns are present but not populated.
+    normalized = df.copy()
+    for col in ["description", "category", "supplier", "unit_cost"]:
+        if col in normalized.columns:
+            normalized[col] = normalized[col].map(lambda v: None if pd.isna(v) else v)
+    normalized["sku"] = normalized["sku"].map(lambda v: "" if pd.isna(v) else v)
+
+    issues += _validate_rows(normalized, CatalogRow, "catalog")
     return issues
 
 

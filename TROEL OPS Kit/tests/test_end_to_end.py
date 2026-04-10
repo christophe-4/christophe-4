@@ -52,6 +52,39 @@ def test_run_accepts_catalog_with_only_required_business_columns(tmp_path: pathl
     assert pd.isna(res.abc.iloc[0]["description"])
 
 
+def test_run_accepts_catalog_optional_fields_with_nan_values(tmp_path: pathlib.Path) -> None:
+    data_dir = tmp_path / "data"
+    out_dir = tmp_path / "out"
+    data_dir.mkdir()
+
+    pd.DataFrame({"date": ["2026-03-01"], "sku": ["SKU-1"], "qty": [3.0]}).to_csv(
+        data_dir / "sales.csv", index=False
+    )
+    pd.DataFrame({"snapshot_date": ["2026-03-01"], "sku": ["SKU-1"], "on_hand_qty": [10.0]}).to_csv(
+        data_dir / "stock.csv", index=False
+    )
+    pd.DataFrame(
+        {
+            "sku": ["SKU-1"],
+            "description": [float("nan")],
+            "category": [float("nan")],
+            "supplier": [float("nan")],
+            "unit_cost": [float("nan")],
+        }
+    ).to_csv(data_dir / "catalog.csv", index=False)
+
+    res = run(
+        sales_path=str(data_dir / "sales.csv"),
+        stock_path=str(data_dir / "stock.csv"),
+        catalog_path=str(data_dir / "catalog.csv"),
+        out_dir=str(out_dir),
+    )
+
+    assert (out_dir / "issues.csv").exists()
+    assert len(res.issues[res.issues["level"] == "error"]) == 0
+    assert (out_dir / "kpi_abc.csv").exists()
+
+
 def test_run_stops_before_kpis_when_validation_has_errors(tmp_path: pathlib.Path) -> None:
     data_dir = tmp_path / "data"
     out_dir = tmp_path / "out"

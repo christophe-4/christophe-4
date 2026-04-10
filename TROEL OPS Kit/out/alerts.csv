@@ -1,0 +1,7 @@
+code,severity,sku,message,metric,asof
+DEAD_SKU,warning,SKU-0005,Aucune vente sur 60j avec stock>0,184.0,2026-03-24
+LOW_COVERAGE,warning,SKU-0001,Couverture faible (3.5 jours),3.5,2026-03-24
+LOW_COVERAGE,warning,SKU-0157,Couverture faible (4.4 jours),4.421052631578947,2026-03-24
+LOW_COVERAGE,warning,SKU-0003,Couverture faible (4.7 jours),4.666666666666667,2026-03-24
+LOW_COVERAGE,warning,SKU-0002,Couverture faible (4.7 jours),4.666666666666667,2026-03-24
+LOW_COVERAGE,warning,SKU-0137,Couverture faible (4.7 jours),4.666666666666667,2026-03-24

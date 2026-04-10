@@ -17,9 +17,6 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 
-# outputs (si tu en génères)
-out/
-
 # OS / IDE
 .DS_Store
 .vscode/
